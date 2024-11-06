@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2023 Everybody
+#
+# SPDX-License-Identifier: CC0-1.0
+
+[submodule "VexiiRiscv/ext/NaxSoftware"]
+	path = VexiiRiscv/ext/NaxSoftware
+	url = https://github.com/SpinalHDL/NaxSoftware.git
+[submodule "VexiiRiscv/ext/riscv-isa-sim"]
+	path = VexiiRiscv/ext/riscv-isa-sim
+	url = https://github.com/SpinalHDL/riscv-isa-sim.git
+[submodule "VexiiRiscv/ext/rvls"]
+	path = VexiiRiscv/ext/rvls
+	url = https://github.com/SpinalHDL/rvls.git
+[submodule "VexiiRiscv/ext/SpinalHDL"]
+	path = VexiiRiscv/ext/SpinalHDL
+	url = https://github.com/SpinalHDL/SpinalHDL.git
