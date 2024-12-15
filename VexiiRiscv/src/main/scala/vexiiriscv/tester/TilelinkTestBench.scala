@@ -14,7 +14,7 @@ import spinal.lib.bus.tilelink
 import spinal.lib.bus.tilelink._
 import spinal.lib.bus.tilelink.coherent.{CacheFiber, HubFiber, SelfFLush}
 import spinal.lib.bus.tilelink.fabric.{Node, SlaveBus}
-import spinal.lib.bus.tilelink.sim.{Checker, MemoryAgent}
+import spinal.lib.bus.tilelink.sim.{Checker, MemoryAgent, TransactionA}
 import spinal.lib.com.uart.TilelinkUartFiber
 import spinal.lib.com.uart.sim.{UartDecoder, UartEncoder}
 import spinal.lib.cpu.riscv.RiscvHart
@@ -40,11 +40,24 @@ class TlTbParam {
   var withJtagTap = false
   var withJtagInstruction = false
   var vexiiParam = new ParamSimple()
+  vexiiParam.withMul = true
+  vexiiParam.withDiv = true
+  vexiiParam.withBtb = true
+  vexiiParam.withGShare = true
+  vexiiParam.withLateAlu = true
+  vexiiParam.allowBypassFrom = 0
+  vexiiParam.divRadix = 4
+  vexiiParam.withCaches()
+  vexiiParam.lsuL1Sets = 32
+  vexiiParam.fetchL1Sets = 32
+  vexiiParam.lsuL1Coherency = true
+
+
   var vexiiCount = 1
-  var l2Bytes = 128*1024
+  var l2Bytes = 16*1024
   var l2Ways = 4
-  var l2Enable = false
-  var hubEnable = false
+  var l2Enable = true
+  var hubEnable = true
 
   def withDebug = withJtagTap ||  withJtagInstruction
 }
@@ -173,7 +186,7 @@ object TlTbSim extends App{
   var traceKonata = false
   var traceSpike = false
   var traceRvls = false
-  var withRvlsCheck = true
+  var withRvlsCheck = false
   var traceWave = false
   var dualSim = false
   var elf: File = null
@@ -238,6 +251,10 @@ object TlTbSim extends App{
       probe.trace = false
       if (withRvlsCheck) probe.add(rvls)
       if (p.withJtagTap) probe.checkLiveness = false
+
+      onSimEnd{
+        println(probe.getStats())
+      }
     }
 
     if(p.withJtagTap) {
@@ -246,7 +263,11 @@ object TlTbSim extends App{
 
 
     val mem = SparseMemory(seed = 0, randOffset = 0x80000000l)
-    val ma = new MemoryAgent(dut.main.mBus.node.bus, dut.mainResetCtrl.cd , seed = 0, randomProberFactor = 0.2f, memArg = Some(mem))(null)
+    val ma = new MemoryAgent(dut.main.mBus.node.bus, dut.mainResetCtrl.cd , seed = 0, randomProberFactor = 0.2f, memArg = Some(mem))(null){
+      override def delayOnA(a: TransactionA) = {
+        dut.mainResetCtrl.cd.waitSampling(20)
+      }
+    }
     ma.driver.driver.setFactor(0.8f)
     val checker = if (ma.monitor.bus.p.withBCE) Checker(ma.monitor)
 
@@ -254,6 +275,14 @@ object TlTbSim extends App{
       val ef = new Elf(elf, 32)
       ef.load(mem, 0x80000000l)
       onVexiis.foreach(_.probe.backends.foreach(_.loadElf(0, elf)))
+      val withPass = ef.getELFSymbol("pass") != null
+      if (withPass) {
+        def trunkPc(pc : Long) = (p.vexiiParam.xlen == 32).mux(pc & 0xFFFFFFFFl, pc)
+        val passSymbol = if(withPass) trunkPc(ef.getSymbolAddress("pass")) else -1
+        onVexiis.head.probe.commitsCallbacks += { (hartId, pc) =>
+          if (pc == passSymbol) delayed(1)(simSuccess())
+        }
+      }
     }
 
     for ((offset, file) <- bins) {

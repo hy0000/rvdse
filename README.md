@@ -1,6 +1,6 @@
 # rvdse
 
-## how to run
+## requirments
 According to [VexiiRiscv Doc](https://spinalhdl.github.io/VexiiRiscv-RTD/master/VexiiRiscv/HowToUse/index.html#repo-setup), install dependencies.
 At lease make sure SBT Verilator can run in your machine.
 
