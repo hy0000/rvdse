@@ -54,7 +54,7 @@ class TlTbParam {
 
 
   var vexiiCount = 1
-  var l2Bytes = 16*1024
+  var l2Bytes = 64*1024
   var l2Ways = 4
   var l2Enable = true
   var hubEnable = true
